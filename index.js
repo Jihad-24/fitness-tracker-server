@@ -1,4 +1,4 @@
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express');
 const jwt = require('jsonwebtoken');
 require('dotenv').config()
@@ -32,13 +32,25 @@ async function run() {
     const userCollection = client.db('FitnessTrackerDB').collection('users');
     const subscribeCollection = client.db('FitnessTrackerDB').collection('subscribes');
     const trainerCollection = client.db('FitnessTrackerDB').collection('trainers');
+    const teacherCollection = client.db('FitnessTrackerDB').collection('teacher');
     const planCollection = client.db('FitnessTrackerDB').collection('plans');
+    const paymentCollection = client.db('FitnessTrackerDB').collection('payments');
 
 
     // trainer api
+    app.get('/teacher',async(req,res)=>{
+      const result = await teacherCollection.find().toArray();
+      res.send(result);
+    })
+
+    app.get('/trainers',async(req,res)=>{
+      const result = await trainerCollection.find().toArray();
+      res.send(result);
+    })
+
     app.post('/trainers',async(req,res)=>{
       const data = req.body;
-      const result = await trainerCollection.insertOne(data)
+      const result = await trainerCollection.insertOne(data);
       res.send(result);
     })
 
@@ -50,6 +62,11 @@ async function run() {
     })
 
     // subscribe api
+    app.get('/subscribes',async(req,res)=>{
+      const result = await subscribeCollection.find().toArray();
+      res.send(result);
+    })
+
     app.post('/subscribes',async(req,res)=>{
         const data = req.body;
         const result= await subscribeCollection.insertOne(data);
@@ -96,7 +113,20 @@ async function run() {
         const result = await userCollection.insertOne(user);
         res.send(result);
       })
+
   
+      app.patch('/users/:id', async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: {
+            role: 'trainer'
+          }
+        }
+        const result = await userCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      })
+
       app.patch('/users/admin/:id', async (req, res) => {
         const id = req.params.id;
         const filter = { _id: new ObjectId(id) };
@@ -116,7 +146,34 @@ async function run() {
         res.send(result);
       })
 
+      
+    // payment intent api
+    app.post('/create-payment-intent', async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      // console.log('amount inside the intent', amount);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: ["card"],
+      })
 
+      res.send({
+        clientSecret: paymentIntent.client_secret
+      })
+    })
+
+    app.get('/payments/:email', async (req, res) => {
+      const email = req.params.email;
+      const user = await paymentCollection.findOne({ email: email });
+      res.send(user);
+  });
+
+    app.post('/payments', async (req, res) => {
+      const payment = req.body;
+      const paymentResult = await paymentCollection.insertOne(payment);
+      res.send( paymentResult );
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
