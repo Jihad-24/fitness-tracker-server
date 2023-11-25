@@ -31,6 +31,23 @@ async function run() {
 
     const userCollection = client.db('FitnessTrackerDB').collection('users');
     const subscribeCollection = client.db('FitnessTrackerDB').collection('subscribes');
+    const trainerCollection = client.db('FitnessTrackerDB').collection('trainers');
+    const planCollection = client.db('FitnessTrackerDB').collection('plans');
+
+
+    // trainer api
+    app.post('/trainers',async(req,res)=>{
+      const data = req.body;
+      const result = await trainerCollection.insertOne(data)
+      res.send(result);
+    })
+
+    // plans api
+    app.post('/plans',async(req,res)=>{
+      const data = req.body;
+      const result = await planCollection.insertOne(data)
+      res.send(result);
+    })
 
     // subscribe api
     app.post('/subscribes',async(req,res)=>{
