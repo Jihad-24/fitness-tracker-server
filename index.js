@@ -36,9 +36,25 @@ async function run() {
     const planCollection = client.db('FitnessTrackerDB').collection('plans');
     const paymentCollection = client.db('FitnessTrackerDB').collection('payments');
     const forumCollection = client.db('FitnessTrackerDB').collection('forums');
+    const classCollection = client.db('FitnessTrackerDB').collection('classes');
+
+    // classes api
+    app.get('/classes',async(req,res)=>{
+      const result=await classCollection.find().toArray();
+      res.send(result);
+    })
+
+    app.post('/classes',async(req,res)=>{
+      const item = req.body;
+      const result = await classCollection.insertOne(item);
+      res.send(result);
+    })
 
     // forum api
-    
+    app.get('/forums',async(req,res)=>{
+      const result=await forumCollection.find().toArray();
+      res.send(result);
+    })
 
     app.post('/forums', async (req, res) => {
       const item = req.body;
