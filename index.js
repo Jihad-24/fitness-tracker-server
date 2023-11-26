@@ -37,30 +37,81 @@ async function run() {
     const paymentCollection = client.db('FitnessTrackerDB').collection('payments');
     const forumCollection = client.db('FitnessTrackerDB').collection('forums');
     const classCollection = client.db('FitnessTrackerDB').collection('classes');
+    const teamCollection = client.db('FitnessTrackerDB').collection('teams');
 
+    // teams api
+    app.get('/teams', async (req, res) => {
+      const result = await teamCollection.find().toArray();
+      res.send(result);
+    })
     // classes api
-    app.get('/classes',async(req,res)=>{
-      const result=await classCollection.find().toArray();
+    app.get('/classes', async (req, res) => {
+      const result = await classCollection.find().toArray();
       res.send(result);
     })
 
-    app.post('/classes',async(req,res)=>{
+    app.post('/classes', async (req, res) => {
       const item = req.body;
       const result = await classCollection.insertOne(item);
       res.send(result);
     })
 
     // forum api
-    app.get('/forums',async(req,res)=>{
-      const result=await forumCollection.find().toArray();
+    app.get('/forums', async (req, res) => {
+      const result = await forumCollection.find().toArray();
       res.send(result);
     })
-
+   
     app.post('/forums', async (req, res) => {
       const item = req.body;
       const result = await forumCollection.insertOne(item);
       res.send(result);
     })
+
+      // Express routes for voting
+      app.post('/forums/:id/upvote', async (req, res) => {
+        const forumId = req.params.id;
+        try {
+            const result = await forumCollection.updateOne(
+                { _id: new ObjectId(forumId) },
+                { $inc: { upVotes: 1 } }
+            );
+            res.send('Up-vote successful');
+        } catch (error) {
+            console.error('Error up-voting:', error);
+            res.status(500).send('Error up-voting');
+        }
+    });
+
+    app.post('/forums/:id/downvote', async (req, res) => {
+        const forumId = req.params.id;
+        try {
+            const result = await forumCollection.updateOne(
+                { _id: new ObjectId(forumId) },
+                { $inc: { downVotes: 1 } }
+            );
+            res.send('Down-vote successful');
+        } catch (error) {
+            console.error('Error down-voting:', error);
+            res.status(500).send('Error down-voting');
+        }
+    });
+
+    app.get('/forums/:id', async (req, res) => {
+      const forumId = req.params.id;
+      try {
+        const result = await forumCollection.findOne({ _id: new ObjectId(forumId) });
+        if (!result) {
+          res.status(404).send('Forum post not found');
+          return;
+        }
+        res.send(result);
+      } catch (error) {
+        console.error('Error fetching forum post:', error);
+        res.status(500).send('Error fetching forum post');
+      }
+    });
+    
 
     // trainer api
     app.get('/teacher', async (req, res) => {
