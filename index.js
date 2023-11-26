@@ -35,118 +35,152 @@ async function run() {
     const teacherCollection = client.db('FitnessTrackerDB').collection('teacher');
     const planCollection = client.db('FitnessTrackerDB').collection('plans');
     const paymentCollection = client.db('FitnessTrackerDB').collection('payments');
+    const forumCollection = client.db('FitnessTrackerDB').collection('forums');
 
+    // forum api
+    
+
+    app.post('/forums', async (req, res) => {
+      const item = req.body;
+      const result = await forumCollection.insertOne(item);
+      res.send(result);
+    })
 
     // trainer api
-    app.get('/teacher',async(req,res)=>{
+    app.get('/teacher', async (req, res) => {
       const result = await teacherCollection.find().toArray();
       res.send(result);
     })
 
-    app.get('/trainers',async(req,res)=>{
+    app.get('/trainers', async (req, res) => {
       const result = await trainerCollection.find().toArray();
       res.send(result);
     })
 
-    app.post('/trainers',async(req,res)=>{
+    app.post('/trainers', async (req, res) => {
       const data = req.body;
       const result = await trainerCollection.insertOne(data);
       res.send(result);
     })
 
     // plans api
-    app.post('/plans',async(req,res)=>{
+    app.get('/plans', async (req, res) => {
+      const result = await planCollection.find().toArray()
+      res.send(result);
+    })
+    app.post('/plans', async (req, res) => {
       const data = req.body;
       const result = await planCollection.insertOne(data)
       res.send(result);
     })
 
     // subscribe api
-    app.get('/subscribes',async(req,res)=>{
+    app.get('/subscribes', async (req, res) => {
       const result = await subscribeCollection.find().toArray();
       res.send(result);
     })
 
-    app.post('/subscribes',async(req,res)=>{
-        const data = req.body;
-        const result= await subscribeCollection.insertOne(data);
-        res.send(result);
+    app.post('/subscribes', async (req, res) => {
+      const data = req.body;
+      const result = await subscribeCollection.insertOne(data);
+      res.send(result);
     })
 
     // user api
     app.get('/users', async (req, res) => {
-        const result = await userCollection.find().toArray();
-        res.send(result);
-      })
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    })
 
-      app.get('/users/:email', async (req, res) => {
-        const email = req.params.email;
-        const user = await userCollection.findOne({ email: email });
-        res.send(user);
+    app.get('/users/:email', async (req, res) => {
+      const email = req.params.email;
+      const user = await userCollection.findOne({ email: email });
+      res.send(user);
     });
-  
-      app.get('/users/admin/:email', async (req, res) => {
-        const email = req?.params?.email;
-        if (email !== req.decoded.email) {
-          return res.status(403).send({ message: 'forbiddien access' })
-        }
-  
-        const query = { email: email };
-        const user = await userCollection.findOne(query);
-        let admin = false;
-        if (user) {
-          admin = user?.role === 'admin';
-        }
-        res.send({ admin });
-      })
-  
-      app.post('/users', async (req, res) => {
-        const user = req.body;
-        // insert email if user doesen't exist
-        // you can do this many ways (1. email unique, 2. upsert, 3. simple cheaking)
-        const query = { email: user.email };
-        const existingUser = await userCollection.findOne(query);
-        if (existingUser) {
-          return res.send({ message: 'user already exist', insertedId: null })
-        }
-  
-        const result = await userCollection.insertOne(user);
-        res.send(result);
-      })
 
-  
-      app.patch('/users/:id', async (req, res) => {
-        const id = req.params.id;
-        const filter = { _id: new ObjectId(id) };
-        const updateDoc = {
-          $set: {
-            role: 'trainer'
-          }
+    app.get('/users/admin/:email', async (req, res) => {
+      const email = req?.params?.email;
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: 'forbiddien access' })
+      }
+
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      let admin = false;
+      if (user) {
+        admin = user?.role === 'admin';
+      }
+      res.send({ admin });
+    })
+
+    app.post('/users', async (req, res) => {
+      const user = req.body;
+      const query = { email: user.email };
+      const existingUser = await userCollection.findOne(query);
+      if (existingUser) {
+        return res.send({ message: 'user already exist', insertedId: null })
+      }
+
+      const result = await userCollection.insertOne(user);
+      res.send(result);
+    })
+
+    app.patch('/users/:email', async (req, res) => {
+      const userEmail = req.params.email;
+      const filter = { email: userEmail };
+      const updateDoc = {
+        $set: {
+          role: 'trainer'
         }
+      };
+
+      try {
         const result = await userCollection.updateOne(filter, updateDoc);
-        res.send(result);
-      })
 
-      app.patch('/users/admin/:id', async (req, res) => {
-        const id = req.params.id;
-        const filter = { _id: new ObjectId(id) };
-        const updateDoc = {
-          $set: {
-            role: 'admin'
-          }
+        if (result.modifiedCount > 0) {
+          await trainerCollection.deleteOne({ email: userEmail });
+
+          res.send({ message: 'User role updated to trainer and removed from trainers collection.' });
+        } else {
+          res.status(404).send({ error: 'User not found.' });
         }
-        const result = await userCollection.updateOne(filter, updateDoc);
-        res.send(result);
-      })
-  
-      app.delete('/users/:id', async (req, res) => {
-        const id = req.params.id;
-        const query = { _id: new ObjectId(id) };
-        const result = await userCollection.deleteOne(query);
-        res.send(result);
-      })
+      } catch (error) {
+        res.status(500).send({ error: 'Internal Server Error' });
+      }
+    });
 
-      
+    // app.patch('/users/:id', async (req, res) => {
+    //   const id = req.params.id;
+    //   const filter = { _id: new ObjectId(id) };
+    //   const updateDoc = {
+    //     $set: {
+    //       role: 'trainer'
+    //     }
+    //   }
+    //   const result = await userCollection.updateOne(filter, updateDoc);
+    //   res.send(result);
+    // })
+
+    // app.patch('/users/admin/:id', async (req, res) => {
+    //   const id = req.params.id;
+    //   const filter = { _id: new ObjectId(id) };
+    //   const updateDoc = {
+    //     $set: {
+    //       role: 'admin'
+    //     }
+    //   }
+    //   const result = await userCollection.updateOne(filter, updateDoc);
+    //   res.send(result);
+    // })
+
+    app.delete('/users/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await userCollection.deleteOne(query);
+      res.send(result);
+    })
+
+
     // payment intent api
     app.post('/create-payment-intent', async (req, res) => {
       const { price } = req.body;
@@ -167,12 +201,12 @@ async function run() {
       const email = req.params.email;
       const user = await paymentCollection.findOne({ email: email });
       res.send(user);
-  });
+    });
 
     app.post('/payments', async (req, res) => {
       const payment = req.body;
       const paymentResult = await paymentCollection.insertOne(payment);
-      res.send( paymentResult );
+      res.send(paymentResult);
     });
 
     // Send a ping to confirm a successful connection
@@ -187,9 +221,9 @@ run().catch(console.dir);
 
 
 app.get('/', (req, res) => {
-    res.send('FitnessTracker  in running')
-  })
-  
-  app.listen(port, () => {
-    console.log(`FitnessTracker  is on port ${port}`);
-  })
+  res.send('FitnessTracker  in running')
+})
+
+app.listen(port, () => {
+  console.log(`FitnessTracker  is on port ${port}`);
+})
