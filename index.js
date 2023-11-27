@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config()
 const app = express();
 const cors = require('cors');
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 5001;
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 
@@ -68,7 +68,6 @@ async function run() {
       res.send(result);
     })
 
-      // Express routes for voting
       app.post('/forums/:id/upvote', async (req, res) => {
         const forumId = req.params.id;
         try {
@@ -158,6 +157,12 @@ async function run() {
       const result = await userCollection.find().toArray();
       res.send(result);
     })
+    app.get('/users/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const result = await userCollection.findOne(query)
+      res.send(result);
+    })
 
     app.get('/users/:email', async (req, res) => {
       const email = req.params.email;
@@ -191,6 +196,23 @@ async function run() {
       const result = await userCollection.insertOne(user);
       res.send(result);
     })
+
+    app.put('/user/:id', async (req, res) => {
+      const userId = req.params.id;
+      // console.log(userId);
+      const { name, image } = req.body;
+      try {
+        const result = await userCollection.updateOne(
+          { _id: new ObjectId(userId) }, 
+          { $set: { name, image } }, 
+        );
+        // console.log(result);
+        res.send(result);
+      } catch (error) {
+        console.error('Error updating user:', error);
+        res.status(500).send('Internal Server Error');
+      }
+    });
 
     app.patch('/users/:email', async (req, res) => {
       const userEmail = req.params.email;
