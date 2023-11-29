@@ -94,9 +94,17 @@ async function run() {
     })
 
     // forum api
+    // app.get('/forums', async (req, res) => {
+    //   const result = await forumCollection.find().toArray();
+    //   res.send(result);
+    // })
     app.get('/forums', async (req, res) => {
-      const result = await forumCollection.find().toArray();
-      res.send(result);
+      const page =Number(req.query.page);
+      const limit = Number(req.query.limit);
+      const skip = (page - 1) * limit;
+      const result = await forumCollection.find().skip(skip).limit(limit).toArray();
+      const totalForums = await forumCollection.estimatedDocumentCount();
+      res.send({result, totalForums});
     })
    
     app.post('/forums',verifyToken,  async (req, res) => {
@@ -212,8 +220,10 @@ async function run() {
 
     app.get('/users/:email', async (req, res) => {
       const email = req.params.email;
-      const user = await userCollection.findOne({ email: email });
-      res.send(user);
+      const query ={email: email}
+      console.log(query);
+      const result = await userCollection.findOne(query);
+      res.send(result);
     });
 
     app.get('/users/admin/:email',verifyToken, async (req, res) => {
@@ -224,7 +234,7 @@ async function run() {
         return res.status(403).send({ message: 'forbiddien access' })
       }
       const query = { email: email };
-      console.log(query);
+      // console.log(query);
       const user = await userCollection.findOne(query);
       // console.log(user);
       let admin = false;
